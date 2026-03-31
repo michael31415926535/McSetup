@@ -1,12 +1,8 @@
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Write-Host "[*] Requesting Administrator privileges..." -ForegroundColor Cyan
     Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
     exit
 }
 Set-Location $PSScriptRoot
-
-Write-Host "[+] MineHall Installer Setup :)"
-
 $tempFolder = "$env:TEMP\MineHall"
 $installer = "MineHallSetup.exe"
 $savePath = Join-Path $tempFolder $installer
